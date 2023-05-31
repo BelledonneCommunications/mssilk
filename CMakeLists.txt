@@ -1,6 +1,6 @@
 ############################################################################
 # CMakeLists.txt
-# Copyright (C) 2014  Belledonne Communications, Grenoble France
+# Copyright (C) 2014-2023  Belledonne Communications, Grenoble France
 #
 ############################################################################
 #
@@ -21,11 +21,8 @@
 ############################################################################
 
 cmake_minimum_required(VERSION 3.0)
+
 project(mssilk VERSION 1.1.1 LANGUAGES C)
-
-
-option(ENABLE_SHARED "Build shared library." YES)
-option(ENABLE_STATIC "Build static library." YES)
 
 
 include(GNUInstallDirs)
@@ -35,9 +32,20 @@ if(NOT CMAKE_INSTALL_RPATH AND CMAKE_INSTALL_PREFIX)
 	message(STATUS "Setting install rpath to ${CMAKE_INSTALL_RPATH}")
 endif()
 
-find_package(Mediastreamer2 CONFIG REQUIRED)
-find_package(bctoolbox CONFIG REQUIRED)
-find_package(ortp CONFIG REQUIRED)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+find_package(BcToolbox)
+if(NOT BCTOOLBOX_FOUND)
+	find_package(bctoolbox CONFIG REQUIRED)
+endif()
+find_package(Ortp)
+if(NOT ORTP_FOUND)
+	find_package(ortp CONFIG REQUIRED)
+endif()
+find_package(Mediastreamer2)
+if(NOT MEDIASTREAMER2_FOUND)
+	find_package(Mediastreamer2 CONFIG REQUIRED)
+endif()
 
 set(FLAVOUR "FIX")
 file(GLOB SILK_SOURCE_FILES "sdk/SILK_SDK_SRC_v1.0.9/SILK_SDK_SRC_${FLAVOUR}_v1.0.9/src/*.c")
@@ -63,25 +71,20 @@ set(SOURCE_FILES
 
 set(MS2_PLUGINS_DIR "${MEDIASTREAMER2_PLUGINS_LOCATION}")
 
-if(ENABLE_STATIC)
-	add_library(mssilk-static STATIC ${SOURCE_FILES})
-	set_target_properties(mssilk-static PROPERTIES OUTPUT_NAME mssilk)
-	target_link_libraries(mssilk-static ${LIBS})
-	install(TARGETS mssilk-static
-		ARCHIVE DESTINATION "${MS2_PLUGINS_DIR}"
-		PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-	)
-endif()
-if(ENABLE_SHARED)
-	if(NOT IOS)
-		add_library(mssilk MODULE ${SOURCE_FILES})
-	else()
+if(BUILD_SHARED_LIBS)
+	if(IOS)
 		add_library(mssilk SHARED ${SOURCE_FILES})
+	else()
+		add_library(mssilk MODULE ${SOURCE_FILES})
 	endif()
-	target_link_libraries(mssilk ${LIBS})
+else()
+	add_library(mssilk STATIC ${SOURCE_FILES})
+endif()
+target_link_libraries(mssilk ${LIBS})
+if(BUILD_SHARED_LIBS)
 	if(IOS)
 		set(MIN_OS ${LINPHONE_IOS_DEPLOYMENT_TARGET})
-		set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/osx/")
+		set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/build/osx/")
 		set_target_properties(mssilk PROPERTIES
 			FRAMEWORK TRUE
 			MACOSX_FRAMEWORK_IDENTIFIER org.linphone.mssilk
@@ -97,14 +100,16 @@ if(ENABLE_SHARED)
 		endif()
 		set_target_properties(mssilk PROPERTIES PREFIX "lib")
 	endif()
-	install(TARGETS mssilk
-		RUNTIME DESTINATION ${MS2_PLUGINS_DIR}
-		LIBRARY DESTINATION ${MS2_PLUGINS_DIR}
-		ARCHIVE DESTINATION ${MS2_PLUGINS_DIR}
-		FRAMEWORK DESTINATION Frameworks
-		PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-	)
 endif()
+
+
+install(TARGETS mssilk
+	RUNTIME DESTINATION ${MS2_PLUGINS_DIR}
+	LIBRARY DESTINATION ${MS2_PLUGINS_DIR}
+	ARCHIVE DESTINATION ${MS2_PLUGINS_DIR}
+	FRAMEWORK DESTINATION Frameworks
+	PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+)
 
 
 # CPack settings
