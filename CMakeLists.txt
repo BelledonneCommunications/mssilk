@@ -22,7 +22,7 @@
 
 cmake_minimum_required(VERSION 3.0)
 
-project(mssilk VERSION 1.1.1 LANGUAGES C)
+project(MSSilk VERSION 1.1.1 LANGUAGES C)
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib/mediastreamer2/plugins")
 
@@ -33,20 +33,7 @@ if(NOT CMAKE_INSTALL_RPATH AND CMAKE_INSTALL_PREFIX)
 	message(STATUS "Setting install rpath to ${CMAKE_INSTALL_RPATH}")
 endif()
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-
-find_package(BcToolbox)
-if(NOT BCTOOLBOX_FOUND)
-	find_package(bctoolbox CONFIG REQUIRED)
-endif()
-find_package(Ortp)
-if(NOT ORTP_FOUND)
-	find_package(ortp CONFIG REQUIRED)
-endif()
-find_package(Mediastreamer2)
-if(NOT MEDIASTREAMER2_FOUND)
-	find_package(Mediastreamer2 CONFIG REQUIRED)
-endif()
+find_package(Mediastreamer2 5.3.0 REQUIRED)
 
 set(FLAVOUR "FIX")
 file(GLOB SILK_SOURCE_FILES "sdk/SILK_SDK_SRC_v1.0.9/SILK_SDK_SRC_${FLAVOUR}_v1.0.9/src/*.c")
@@ -54,23 +41,11 @@ file(GLOB SILK_SOURCE_FILES "sdk/SILK_SDK_SRC_v1.0.9/SILK_SDK_SRC_${FLAVOUR}_v1.
 # turn off warnings for the sdk compilation since we won't fix them
 set_source_files_properties(${SILK_SOURCE_FILES} PROPERTIES COMPILE_FLAGS -w)
 
-include_directories(
-	${MEDIASTREAMER2_INCLUDE_DIRS}
-	sdk/SILK_SDK_SRC_v1.0.9/SILK_SDK_SRC_${FLAVOUR}_v1.0.9/interface
-)
-
-add_definitions(-DVERSION=\"${PROJECT_VERSION}\")
-
-
-set(LIBS ${MEDIASTREAMER2_LIBRARIES} ${ORTP_LIBRARIES} ${BCTOOLBOX_CORE_LIBRARIES})
-
 set(SOURCE_FILES
 	${SILK_SOURCE_FILES}
 	silk_dec.c
 	silk_enc.c
 )
-
-set(MS2_PLUGINS_DIR "${MEDIASTREAMER2_PLUGINS_LOCATION}")
 
 if(BUILD_SHARED_LIBS)
 	if(IOS)
@@ -81,7 +56,9 @@ if(BUILD_SHARED_LIBS)
 else()
 	add_library(mssilk STATIC ${SOURCE_FILES})
 endif()
-target_link_libraries(mssilk ${LIBS})
+target_compile_definitions(mssilk PRIVATE "VERSION=\"${PROJECT_VERSION}\"")
+target_include_directories(mssilk PRIVATE "sdk/SILK_SDK_SRC_v1.0.9/SILK_SDK_SRC_${FLAVOUR}_v1.0.9/interface")
+target_link_libraries(mssilk PRIVATE ${Mediastreamer2_TARGET})
 if(BUILD_SHARED_LIBS)
 	if(IOS)
 		set(MIN_OS ${LINPHONE_IOS_DEPLOYMENT_TARGET})
@@ -105,17 +82,18 @@ endif()
 
 
 install(TARGETS mssilk
-	RUNTIME DESTINATION ${MS2_PLUGINS_DIR}
-	LIBRARY DESTINATION ${MS2_PLUGINS_DIR}
-	ARCHIVE DESTINATION ${MS2_PLUGINS_DIR}
+	RUNTIME DESTINATION ${Mediastreamer2_PLUGINS_DIR}
+	LIBRARY DESTINATION ${Mediastreamer2_PLUGINS_DIR}
+	ARCHIVE DESTINATION ${Mediastreamer2_PLUGINS_DIR}
 	FRAMEWORK DESTINATION Frameworks
 	PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
 )
 
 
 # CPack settings
+string(TOLOWER "${PROJECT_NAME}" LOWERCASE_PROJECT_NAME)
 set(CPACK_SOURCE_GENERATOR "TGZ")
-set(CPACK_SOURCE_PACKAGE_FILE_NAME "${PROJECT_NAME}-${PROJECT_VERSION}")
+set(CPACK_SOURCE_PACKAGE_FILE_NAME "${LOWERCASE_PROJECT_NAME}-${PROJECT_VERSION}")
 set(CPACK_SOURCE_IGNORE_FILES
 	"^${CMAKE_BINARY_DIR}"
 	"/\\\\..+"
