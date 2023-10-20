@@ -61,12 +61,10 @@ target_include_directories(mssilk PRIVATE "sdk/SILK_SDK_SRC_v1.0.9/SILK_SDK_SRC_
 target_link_libraries(mssilk PRIVATE ${Mediastreamer2_TARGET})
 if(BUILD_SHARED_LIBS)
 	if(IOS)
-		set(MIN_OS ${LINPHONE_IOS_DEPLOYMENT_TARGET})
-		set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/build/osx/")
 		set_target_properties(mssilk PROPERTIES
 			FRAMEWORK TRUE
 			MACOSX_FRAMEWORK_IDENTIFIER org.linphone.mssilk
-  			MACOSX_FRAMEWORK_INFO_PLIST Info.plist.in
+  			MACOSX_FRAMEWORK_INFO_PLIST "${PROJECT_SOURCE_DIR}/build/osx/Info.plist.in"
 		) 
 	endif()
 	if(MSVC)
